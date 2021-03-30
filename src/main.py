@@ -8,7 +8,7 @@ from flask_swagger import swagger
 from flask_cors import CORS
 from utils import APIException, generate_sitemap
 from admin import setup_admin
-from models import db, User
+from models import db, Todos
 #from models import Person
 
 app = Flask(__name__)
@@ -30,14 +30,35 @@ def handle_invalid_usage(error):
 def sitemap():
     return generate_sitemap(app)
 
-@app.route('/user', methods=['GET'])
-def handle_hello():
+@app.route('/to-do', methods=['GET'])
+def get_todo():
 
-    response_body = {
-        "msg": "Hello, this is your GET /user response "
-    }
+    fav = Todos.query.all()
+    all_favs = list(map(lambda x: x.serialize(), fav))
 
-    return jsonify(response_body), 200
+    return jsonify(all_favs), 200
+
+@app.route('/post_todo', methods=['POST'])
+def post_todo():
+
+    request_body = request.get_json()
+    fav = Todos(label=request_body["label"], done=request_body["done"])
+    db.session.add(fav)
+    db.session.commit()
+
+    return jsonify("Added!"), 200
+
+@app.route('/del_todo/<int:fid>', methods=['DELETE'])
+def del_todo(fid):
+    
+    fav = Todos.query.get(fid)
+
+    if fav is None:
+        raise APIException('To-Do not found', status_code=404)
+    db.session.delete(fav)
+    db.session.commit()
+
+    return jsonify("Deleted!!"), 200
 
 # this only runs if `$ python src/main.py` is executed
 if __name__ == '__main__':
